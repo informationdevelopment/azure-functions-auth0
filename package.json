@@ -1,0 +1,27 @@
+{
+  "name": "@informationdevelopment/azure-functions-auth0",
+  "version": "1.0.0",
+  "description": "Auth0 authentication middleware for Azure Functions",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/informationdevelopment/azure-functions-auth0.git"
+  },
+  "keywords": [
+    "azure-functions",
+    "auth0"
+  ],
+  "author": "Information Development, Inc.",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/informationdevelopment/azure-functions-auth0/issues"
+  },
+  "homepage": "https://github.com/informationdevelopment/azure-functions-auth0#readme",
+  "dependencies": {
+    "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^1.6.0"
+  }
+}
