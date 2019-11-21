@@ -1,10 +1,17 @@
 const {promisify} = require('util');
-const jwt = require('jsonwebtoken');
+const {JsonWebTokenError, TokenExpiredError, NotBeforeError} = require('jsonwebtoken');
+const verifyJwtAsync = promisify(require('jsonwebtoken').verify);
 const jwksClient = require('jwks-rsa');
 
-const verifyAsync = promisify(jwt.verify);
-const algorithms = ['RS256', 'HS256'];
 const createFailureResponse = (status, message) => ({status, body: {message}});
+const RES_401_UNAUTHORIZED = createFailureResponse(401, 'Unauthorized');
+const RES_403_FORBIDDEN = createFailureResponse(403, 'Forbidden');
+const RES_500_INTERNAL_SERVER_ERROR = createFailureResponse(500, 'Internal Server Error');
+
+// Auth0 only supports RS256 and HS256
+const ALLOWED_SIGNING_ALGORITHMS = ['RS256', 'HS256'];
+
+
 
 module.exports.createMiddleware = (domain, audience, key) => {
     const issuer = `https://${domain}/`;
@@ -23,49 +30,51 @@ module.exports.createMiddleware = (domain, audience, key) => {
         };
     }
 
-    return (scopes, httpTrigger) => {
+    return (scope, func) => {
         return async (context, ...args) => {
             const {method, headers, originalUrl: url} = context.req;
             try {
-                // Strip out the "Bearer " text from the beginning of the Authorization header
+                if (!headers.authorization) {
+                    // Returning the response in addition to assigning to context.res ensures
+                    // that $return HTTP output bindings will work in addition to named bindings.
+                    return context.res = RES_401_UNAUTHORIZED;
+                }
+                // The actual token begins after the "Bearer " string.
                 const token = headers.authorization.slice(7);
 
+                const options = {
+                    algorithms: ALLOWED_SIGNING_ALGORITHMS,
+                    audience,
+                    issuer
+                };
                 // Verify the JSON web token. If no exception is thrown, the token is valid.
-                const options = {algorithms, audience, issuer};
-                const payload = await verifyAsync(token, key, options);
+                const payload = await verifyJwtAsync(token, key, options);
 
-                // Verify scopes, if defined.
                 if (scopes) {
-                    const authorizedScopes = payload.scope.split(' ');
-                    const httpTriggerScopes = [].concat(scopes);   // scopes can be a single value or an array
+                    const tokenScopes = payload.scope.split(' ');
+                    const funcScopes = scope.split(' ');
 
-                    // Ensure that all scopes defined by the authenticated Azure Function
+                    // Ensure that all scopes required by the Azure Function
                     // are included in the list of authorized scopes.
-                    if (!httpTriggerScopes.every(scope => authorizedScopes.includes(scope))) {
+                    if (!funcScopes.every(scope => tokenScopes.includes(scope))) {
                         context.log.error(`azure-functions-auth0: One or more missing scopes in ${method} request from ${url}.`);
-                        context.res = createFailureResponse(403, 'Forbidden');
-                        return;
+                        return context.res = RES_403_FORBIDDEN;
                     }
                 }
 
                 context.log(`azure-functions-auth0: Successfully authorized a ${method} request from ${url}.`);
-                return httpTrigger(context, ...args);
+                return func(context, ...args);
             }
             catch (err) {
-                if (err instanceof jwt.JsonWebTokenError ||
-                    err instanceof jwt.TokenExpiredError ||
-                    err instanceof jwt.NotBeforeError) {
-                    // Authentication failed; log the error and return HTTP 401 Unauthorized
+                if (err instanceof JsonWebTokenError || err instanceof TokenExpiredError || err instanceof NotBeforeError) {
                     context.log.error(`azure-functions-auth0: Unauthorized ${method} request from ${url}: ${err.message}`);
-                    context.res = createFailureResponse(401, 'Unauthorized');
+                    return context.res = RES_401_UNAUTHORIZED;
                 }
                 else {
                     context.log.error(`azure-functions-auth0: An unexpected error has occurred.\n${err.stack}`);
-                    context.res = createFailureResponse(500, 'Internal Server Error');
+                    return context.res = RES_500_INTERNAL_SERVER_ERROR;
                 }
             }
         };
     };
 }
-
-module.exports.unauthenticatedResponse = {res: {status: 401, body: {err: "Unauthenticated"}}};
