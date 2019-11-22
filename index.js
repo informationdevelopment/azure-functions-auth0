@@ -30,7 +30,7 @@ module.exports.createMiddleware = (domain, audience, key) => {
         };
     }
 
-    return (scope, func) => {
+    return (scopes, func) => {
         return async (context, ...args) => {
             const {method, headers, originalUrl: url} = context.req;
             try {
@@ -52,7 +52,7 @@ module.exports.createMiddleware = (domain, audience, key) => {
 
                 if (scopes) {
                     const tokenScopes = payload.scope.split(' ');
-                    const funcScopes = scope.split(' ');
+                    const funcScopes = scopes.split(' ');
 
                     // Ensure that all scopes required by the Azure Function
                     // are included in the list of authorized scopes.
