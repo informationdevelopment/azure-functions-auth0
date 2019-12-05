@@ -13,12 +13,12 @@ const ALLOWED_SIGNING_ALGORITHMS = ['RS256', 'HS256'];
 
 
 
-module.exports.createMiddleware = (domain, audience, key) => {
-    const issuer = `https://${domain}/`;
+module.exports.createMiddleware = (appDomain, apiIdentifier, key) => {
+    const issuer = `https://${appDomain}/`;
 
     // If no key is provided, use a function that looks for a public key hosted on the Auth0 tenant
     if (!key) {
-        const client = jwksClient({jwksUri: `https://${domain}/.well-known/jwks.json`});
+        const client = jwksClient({jwksUri: `https://${appDomain}/.well-known/jwks.json`});
         key = (header, callback) => {
             const getSigningKeyAsync = promisify(client.getSigningKey).bind(client);
             getSigningKeyAsync(header.kid).then(key => {
@@ -44,7 +44,7 @@ module.exports.createMiddleware = (domain, audience, key) => {
 
                 const options = {
                     algorithms: ALLOWED_SIGNING_ALGORITHMS,
-                    audience,
+                    audience: apiIdentifier,
                     issuer
                 };
                 // Verify the JSON web token. If no exception is thrown, the token is valid.
