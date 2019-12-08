@@ -1,6 +1,6 @@
 {
   "name": "@informationdevelopment/azure-functions-auth0",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Auth0 authentication middleware for Azure Functions",
   "main": "index.js",
   "scripts": {
