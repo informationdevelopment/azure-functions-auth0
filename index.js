@@ -50,9 +50,10 @@ module.exports.createMiddleware = (appDomain, apiIdentifier, key) => {
                 // Verify the JSON web token. If no exception is thrown, the token is valid.
                 const payload = await verifyJwtAsync(token, key, options);
 
-                if (scopes) {
-                    const tokenScopes = payload.scope.split(' ');
-                    const funcScopes = scopes.split(' ');
+                if (scopes !== null) {
+                    const getScopeArray = (scope) => typeof scope == 'string' ? scope.split(' ') : [];
+                    const tokenScopes = getScopeArray(payload.scope);
+                    const funcScopes = getScopeArray(scopes);
 
                     // Ensure that all scopes required by the Azure Function
                     // are included in the list of authorized scopes.
