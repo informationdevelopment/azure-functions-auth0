@@ -1,6 +1,8 @@
 # azure-functions-auth0
 Auth0 authentication middleware for Azure Functions.
 
+**This package has been deprecated and is no longer maintained. Please use [@informationdevelopment/auth0-serverless](https://github.com/informationdevelopment/auth0-serverless) instead.**
+
 ### Installation
 azure-functions-auth0 can be installed with NPM:
 
